@@ -1,0 +1,17 @@
+version: '3.8'
+services:
+  backend:
+    build: .
+    ports:
+      - '3000:3000'
+    environment:
+      - PORT=3000
+      - DB_PATH=/app/data/lockers.sqlite
+      - JWT_SECRET=dev-secret-change-me
+      - SEED_ADMIN_USER=admin
+      - SEED_ADMIN_PASSWORD=admin1234
+    volumes:
+      - lockers_data:/app/data
+
+volumes:
+  lockers_data:
