@@ -38,28 +38,36 @@ export class LockersService {
     const locker = this.lockersRepository.create(dto);
     return this.lockersRepository.save(locker);
   }
+  async remove(id: number): Promise<void> {
+  const result = await this.lockersRepository.delete(id);
 
-  async updateStatus(id: number, dto: UpdateLockerStatusDto): Promise<Locker> {
-    const locker = await this.findOne(id);
+  if (result.affected === 0) {
+    throw new NotFoundException(`Casillero con id ${id} no encontrado`);
+  }
+}
 
-    const nextDoorStatus = dto.doorStatus ?? locker.doorStatus;
-    const nextOccupancyStatus = dto.occupancyStatus ?? locker.occupancyStatus;
+async updateStatus(id: number, dto: UpdateLockerStatusDto): Promise<Locker> {
+  const locker = await this.findOne(id);
 
-    this.assertConsistentState(nextDoorStatus, nextOccupancyStatus);
+  const nextDoorStatus = dto.doorStatus ?? locker.doorStatus;
+  const nextOccupancyStatus = dto.occupancyStatus ?? locker.occupancyStatus;
 
-    locker.doorStatus = nextDoorStatus;
-    locker.occupancyStatus = nextOccupancyStatus;
+  
+  this.assertConsistentState(nextDoorStatus, nextOccupancyStatus);
 
-    return this.lockersRepository.save(locker);
+ 
+  locker.doorStatus = nextDoorStatus;
+  locker.occupancyStatus = nextOccupancyStatus;
+
+
+  if (dto.isMaintenance !== undefined) {
+    locker.isMaintenance = dto.isMaintenance;
   }
 
-  /**
-   * Regla de negocio (ver DECISIONES.md): un casillero no puede quedar
-   * marcado como OCUPADO mientras su puerta está ABIERTA. Se asume que
-   * "ocupar" implica que el usuario ya guardó sus pertenencias y cerró
-   * la puerta. Cualquier otra combinación de las dos dimensiones
-   * (puerta / ocupación) es válida.
-   */
+  return this.lockersRepository.save(locker);
+}
+
+  
   private assertConsistentState(door: DoorStatus, occupancy: OccupancyStatus) {
     if (door === DoorStatus.ABIERTO && occupancy === OccupancyStatus.OCUPADO) {
       throw new BadRequestException(

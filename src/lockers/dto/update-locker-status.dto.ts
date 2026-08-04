@@ -1,4 +1,4 @@
-import { IsEnum, IsOptional } from 'class-validator';
+import { IsEnum, IsOptional,IsBoolean } from 'class-validator';
 import { DoorStatus, OccupancyStatus } from '../../common/enums/locker.enums';
 
 export class UpdateLockerStatusDto {
@@ -9,4 +9,8 @@ export class UpdateLockerStatusDto {
   @IsOptional()
   @IsEnum(OccupancyStatus, { message: 'occupancyStatus debe ser "ocupado" o "vacio"' })
   occupancyStatus?: OccupancyStatus;
+
+  @IsOptional()
+  @IsBoolean()
+  isMaintenance?: boolean;
 }

@@ -34,4 +34,7 @@ export class Locker {
 
   @UpdateDateColumn()
   updatedAt: Date;
+
+  @Column({ type: 'boolean', default: false })
+  isMaintenance: boolean;
 }
