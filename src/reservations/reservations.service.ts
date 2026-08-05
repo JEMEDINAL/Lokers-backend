@@ -7,9 +7,9 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Locker } from '../lockers/locker.entity';
+import { DoorStatus, OccupancyStatus } from '../common/enums/locker.enums';
 import { CreateReservationDto } from './dto/create-reservation.dto';
 import { Reservation } from './reservation.entity';
-import { OccupancyStatus } from 'src/common/enums/locker.enums';
 
 @Injectable()
 export class ReservationsService {
@@ -28,11 +28,11 @@ export class ReservationsService {
   }
 
   async findByReservedBy(reservedBy: string): Promise<Reservation[]> {
-  return await this.reservationsRepository.find({
-    where: { reservedBy },
-    relations: ['locker'],
-  });
-}
+    return await this.reservationsRepository.find({
+      where: { reservedBy },
+      relations: ['locker'],
+    });
+  }
 
   async findOne(id: number): Promise<Reservation> {
     const reservation = await this.reservationsRepository.findOne({
@@ -49,12 +49,10 @@ export class ReservationsService {
 
   async create(dto: CreateReservationDto): Promise<Reservation> {
     const locker = await this.lockersRepository.findOne({ where: { id: dto.lockerId } });
-    
+
     if (!locker) {
       throw new NotFoundException(`Casillero con id ${dto.lockerId} no encontrado`);
     }
-    locker.occupancyStatus = OccupancyStatus.OCUPADO
-    this.lockersRepository.save(locker)
 
     const startTime = new Date(dto.startTime);
     const endTime = new Date(dto.endTime);
@@ -77,15 +75,49 @@ export class ReservationsService {
     }
 
     const reservation = this.reservationsRepository.create({
-    locker,                     
-    lockerId: dto.lockerId,     
-    reservedBy: dto.reservedBy,
-    codeLoker: dto.lockerCode,  
-    startTime,
-    endTime,
-    note: dto.note,
-  });
+      locker,
+      lockerId: dto.lockerId,
+      reservedBy: dto.reservedBy,
+      codeLoker: dto.lockerCode,
+      startTime,
+      endTime,
+      note: dto.note,
+    });
 
     return this.reservationsRepository.save(reservation);
+  }
+
+  async endReservation(id: number, requesterUsername: string): Promise<void> {
+  const reservation = await this.findOne(id);
+
+  if (reservation.reservedBy !== requesterUsername) {
+    throw new BadRequestException('Esta reserva no te pertenece');
+  }
+
+  await this.lockersRepository.update(reservation.lockerId, {
+    occupancyStatus: OccupancyStatus.VACIO,
+    doorStatus: DoorStatus.CERRADO,
+  });
+
+  await this.reservationsRepository.remove(reservation);
+}
+
+  async openDoor(id: number, requesterUsername: string): Promise<Reservation> {
+    const reservation = await this.findOne(id);
+
+    if (reservation.reservedBy !== requesterUsername) {
+      throw new BadRequestException('Esta reserva no te pertenece');
+    }
+
+    const now = new Date();
+    if (now < reservation.startTime || now > reservation.endTime) {
+      throw new BadRequestException('La reserva no está activa en este momento');
+    }
+
+    await this.lockersRepository.update(reservation.lockerId, {
+      doorStatus: DoorStatus.ABIERTO,
+    });
+
+    return reservation;
   }
 }
