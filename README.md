@@ -69,6 +69,7 @@ Devuelve un `access_token` (JWT) que se envía como `Authorization: Bearer <toke
 | ------ | -------------------- | ------------ | --------------------------------------------------------- |
 | POST   | /auth/login           | No           | Login de administrador, devuelve JWT                      |
 | POST   | /auth/register        | Sí (admin)   | Registra un nuevo usuario administrador                    |
+| POST   | /auth/register-user        | NO   | Registra un nuevo usuario                     |
 | GET    | /lockers              | No           | Lista todos los casilleros                                 |
 | GET    | /lockers/:id          | No           | Detalle de un casillero                                    |
 | POST   | /lockers              | Sí (admin)   | Crea un casillero nuevo                                    |
