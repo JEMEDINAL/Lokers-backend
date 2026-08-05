@@ -29,4 +29,8 @@ export class UsersService {
 
 
   }
+   async findAll(): Promise<Omit<User, 'passwordHash'>[]> {
+    const users = await this.usersRepository.find({ order: { username: 'ASC' } });
+    return users.map(({ passwordHash, ...rest }) => rest);
+  }
 }
