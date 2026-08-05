@@ -23,6 +23,9 @@ export class Reservation {
   @Column()
   reservedBy: string;
 
+  @Column()
+  codeLoker:string
+
   @Column({ type: 'datetime' })
   startTime: Date;
 
@@ -31,4 +34,7 @@ export class Reservation {
 
   @CreateDateColumn()
   createdAt: Date;
+
+  @Column()
+  note:string;
 }

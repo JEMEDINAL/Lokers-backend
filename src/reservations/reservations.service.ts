@@ -9,6 +9,7 @@ import { Repository } from 'typeorm';
 import { Locker } from '../lockers/locker.entity';
 import { CreateReservationDto } from './dto/create-reservation.dto';
 import { Reservation } from './reservation.entity';
+import { OccupancyStatus } from 'src/common/enums/locker.enums';
 
 @Injectable()
 export class ReservationsService {
@@ -26,18 +27,34 @@ export class ReservationsService {
     });
   }
 
-  findByLocker(lockerId: number): Promise<Reservation[]> {
-    return this.reservationsRepository.find({
-      where: { lockerId },
-      order: { startTime: 'ASC' },
+  async findByReservedBy(reservedBy: string): Promise<Reservation[]> {
+  return await this.reservationsRepository.find({
+    where: { reservedBy },
+    relations: ['locker'],
+  });
+}
+
+  async findOne(id: number): Promise<Reservation> {
+    const reservation = await this.reservationsRepository.findOne({
+      where: { id },
+      relations: ['locker'],
     });
+
+    if (!reservation) {
+      throw new NotFoundException(`Reservación con ID ${id} no encontrada`);
+    }
+
+    return reservation;
   }
 
   async create(dto: CreateReservationDto): Promise<Reservation> {
     const locker = await this.lockersRepository.findOne({ where: { id: dto.lockerId } });
+    
     if (!locker) {
       throw new NotFoundException(`Casillero con id ${dto.lockerId} no encontrado`);
     }
+    locker.occupancyStatus = OccupancyStatus.OCUPADO
+    this.lockersRepository.save(locker)
 
     const startTime = new Date(dto.startTime);
     const endTime = new Date(dto.endTime);
@@ -46,8 +63,6 @@ export class ReservationsService {
       throw new BadRequestException('startTime debe ser anterior a endTime');
     }
 
-    // Dos reservas del mismo casillero se solapan si una empieza antes de
-    // que la otra termine y termina después de que la otra empieza.
     const overlapping = await this.reservationsRepository
       .createQueryBuilder('reservation')
       .where('reservation.lockerId = :lockerId', { lockerId: dto.lockerId })
@@ -62,11 +77,14 @@ export class ReservationsService {
     }
 
     const reservation = this.reservationsRepository.create({
-      lockerId: dto.lockerId,
-      reservedBy: dto.reservedBy,
-      startTime,
-      endTime,
-    });
+    locker,                     
+    lockerId: dto.lockerId,     
+    reservedBy: dto.reservedBy,
+    codeLoker: dto.lockerCode,  
+    startTime,
+    endTime,
+    note: dto.note,
+  });
 
     return this.reservationsRepository.save(reservation);
   }
